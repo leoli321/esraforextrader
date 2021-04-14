@@ -31,8 +31,8 @@ from colorama import Fore, Back, Style
 # access_token = "1d8b241d70c8860beb0a0a8455e48e5f-3390fae9470905f3edf39b2b8c49e0df"
 
 #account info for practice acct.
-accountID = "101-001-16023947-001"
-access_token = "127efc9a9231079d8b32ccbee52a70e4-d471d1012da03a4a7bbda51150d42eb8"
+accountID = "101-001-16127603-001"
+access_token = "3ec9836b4a105fb84276a56b35039da4-f14b4b0029912fcaa6b27b95134963fc"
 
 # oanda = API(environment="live", access_token=access_token)
 oanda = API(access_token=access_token)
@@ -93,16 +93,26 @@ async def scalp(order_mode=False):
                 'market': market,
                 'strategy_scores': []
             })
-        # rsi_h1_score = await RSI_strategy(market, "H1")
-        # double_ema_score = await double_ema(market, "H1")
-        # MACD_score = await MACD_strategy(market, "H1")
-        # ATR_score = await ATR_strategy(market, "H1")
+        rsi_h1_score = await RSI_strategy(market, "H1")
+        double_ema_score = await double_ema(market, "H1")
+        MACD_score = await MACD_strategy(market, "H1")
+        ATR_score = await ATR_strategy(market, "H1")
         # points_of_val_score = await points_of_value(market, "H1")
-        client_sentiment_score = await client_sentiment(market)
+        # client_sentiment_score = await client_sentiment(market)
+
+        print("\nMARKET: {}".format(market))
+        overallscore = {}
+        buy = 0
+        sell = 0
+        count = 0
 
         ### This section is for LSTM Neural Network that will predict the next price
+        lstm_signal = {
+            'buy_signal': 0.0,
+            'sell_signal': 0.0
+        }
         params = {
-            "count": 500,
+            "count": 5000,
             "granularity": "H1"
             }
         candles = oanda.request(instruments.InstrumentsCandles(instrument=market, params=params))['candles']
@@ -117,21 +127,23 @@ async def scalp(order_mode=False):
         df['Volume'] = [float(i['volume']) for i in candles]
         last_val, next_val = lstmpredictor.lstm_neural_network(df)
         print(last_val, next_val)
+        if last_val > next_val:
+            lstm_signal['sell_signal'] += 8 * (last_val/next_val)
+        elif last_val < next_val:
+            lstm_signal['buy_signal'] += 8 * (next_val/last_val)
+        buy += lstm_signal['buy_signal']
+        sell += lstm_signal['sell_signal']
         ###
 
         print("\nMARKET: {}".format(market))
-        # print("RSI score: {}".format(rsi_h1_score))
-        # print("double EMA score: {}".format(double_ema_score))
-        # print("MACD score: {}".format(MACD_score))
-        # print("ATR score: {}".format(ATR_score))
+        print("RSI score: {}".format(rsi_h1_score))
+        print("double EMA score: {}".format(double_ema_score))
+        print("MACD score: {}".format(MACD_score))
+        print("ATR score: {}".format(ATR_score))
         # print("Points of Value score: {}".format(points_of_val_score))
-        print("Client Sentiment Score: {}".format(client_sentiment_score))
+        # print("Client Sentiment Score: {}".format(client_sentiment_score))
         # scores_by_market[i]['strategy_scores'].extend([rsi_h1_score, double_ema_score, MACD_score, ATR_score])
-        scores_by_market[i]['strategy_scores'].extend([client_sentiment_score])
-        overallscore = {}
-        buy = 0
-        sell = 0
-        count = 0
+        scores_by_market[i]['strategy_scores'].extend([rsi_h1_score, double_ema_score, MACD_score, ATR_score, lstm_signal])
         ## Apply Randomized Weighted Majority Algo here to optimize the weights of each strategy over time
         for strategyscore in scores_by_market[i]['strategy_scores']:
             try:
