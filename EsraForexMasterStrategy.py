@@ -238,17 +238,18 @@ def buyCurrency(market, positionType, positionSize): #positionSize in Dollars (A
         
         print(Back.GREEN + "Instrument: " + market)
         print(Style.RESET_ALL)
-        print(Fore.BLUE + "Stop Loss Price: " + str(round(bidding_price * .995, 3)))
+        print(Fore.BLUE + "Stop Loss Price: " + str(round(bidding_price * .998, 3)))
         print(Fore.YELLOW + "Units: " + str(buy_units))
         print(Fore.RED + "Type: " + "MARKET")
         print(Fore.MAGENTA + "Time In Force: " + "FOK")
         print(Style.RESET_ALL)
         print('\n')
+        rounded_stop_loss_price_buy = round(bidding_price * .995, 3)
         marketOrderData = {
             "order": {
                 "stopLossOnFill": {
                     "timeInForce": "GTC",
-                    "price": round(bidding_price * .995, 3)
+                    "price": str(rounded_stop_loss_price_buy)
                 },
                 "timeInForce": "FOK",
                 "instrument": market,
@@ -316,16 +317,17 @@ def buyCurrency(market, positionType, positionSize): #positionSize in Dollars (A
         print(Back.GREEN + "Instrument: " + market)
         print(Style.RESET_ALL)
         print(Fore.BLUE + "Stop Loss Price: " + str(round(ask_price * 1.002, 3)))
-        print(Fore.YELLOW + "Units: " + str(buy_units))
+        print(Fore.YELLOW + "Units: " + str(short_units))
         print(Fore.RED + "Type: " + "MARKET")
         print(Fore.MAGENTA + "Time In Force: " + "FOK")
         print(Style.RESET_ALL)
         print('\n')
+        stop_loss_price_sell = round(ask_price * 1.002, 3)
         marketOrderData = {
             "order": {
                 "stopLossOnFill": {
                     "timeInForce": "GTC",
-                    "price": round(ask_price * 1.002, 3)
+                    "price": str(stop_loss_price_sell)
                 },
                 "timeInForce": "FOK",
                 "instrument": market,
@@ -348,22 +350,24 @@ def buyCurrency(market, positionType, positionSize): #positionSize in Dollars (A
         #         "positionFill": "DEFAULT"
         #     }
         # }
-        r2 = orders.OrderCreate(accountID=accountID, data=marketOrderData)
         
+        r2 = orders.OrderCreate(accountID=accountID, data=marketOrderData)
         oanda.request(r2)
-        if (r2.response.orderCancelTransaction):
-            print("_______SHORT ORDER HAS NOT BEEN FULFILLED_______")
-            print("Reason: " + r2.response.orderCancelTransaction.reason)
-            return
-        print("\n")
-        print("_______SHORT ORDER FULFILLED______")
-        print("\n")
-        print(Fore.BLUE + "Order_ID: " + r2.response.id)
-        print(Fore.YELLOW + "Account_ID: " + r2.response.accountID)
-        print(Fore.RED + "Type: " + "MARKET")
-        print(Fore.MAGENTA + "Time In Force: " + "FOK")
-        print(Style.RESET_ALL)
         print(r2.response)
+
+        # if ('orderCancelTransaction' in r2.response.keys()):
+        #     print("_______SHORT ORDER HAS NOT BEEN FULFILLED_______")
+        #     print("Reason: " + r2.response.orderCancelTransaction.reason)
+        #     return
+        # print("\n")
+        # print("_______SHORT ORDER FULFILLED______")
+        # print("\n")
+        # print(Fore.BLUE + "Order_ID: " + r2.response.id)
+        # print(Fore.YELLOW + "Account_ID: " + r2.response.accountID)
+        # print(Fore.RED + "Type: " + "MARKET")
+        # print(Fore.MAGENTA + "Time In Force: " + "FOK")
+        # print(Style.RESET_ALL)
+        # print(r2.response)
 
          
 def findOpenPositionMarkets():
@@ -393,7 +397,13 @@ async def create_order(market, buy_signal, sell_signal):
     return market_order, trailing_stop
 
 
-
+async def getCandles(market, count, length):
+    params = {
+        "count": count,
+        "granularity": length
+    }
+    candles = oanda.request(instruments.InstrumentsCandles(instrument=market, params=params))['candles']
+    return candles
 
 
 
@@ -411,11 +421,7 @@ async def double_ema(market, length):
     intersect_candle =[]
 
     #find general trend
-    params = {
-        "count": 500,
-        "granularity": length
-    }
-    candles = oanda.request(instruments.InstrumentsCandles(instrument=market, params=params))['candles']
+    candles = await getCandles(market, 500, length)
     emas_long = await calc_emas(candles, 75)
     x_vals = np.arange(0,len(emas_long))
     y_vals = np.array(emas_long)
@@ -518,11 +524,7 @@ async def double_ema(market, length):
 async def RSI_strategy(market, length):
     buy_signal = 0
     sell_signal = 0
-    params = {
-        "count": 500,
-        "granularity": length
-    }
-    candles = oanda.request(instruments.InstrumentsCandles(instrument=market, params=params))['candles']
+    candles = await getCandles(market, 500, length)
     rsi_sma, rsi_ewma = await RSI(candles, 14)
     cout = 0
     rsi_ewma_arr = rsi_ewma[0].tolist()
@@ -569,11 +571,7 @@ async def RSI_strategy(market, length):
 async def MACD_strategy(market, length):
     buy_signal = 0.0
     sell_signal = 0.0
-    params = {
-        "count": 500,
-        "granularity": length
-    }
-    candles = oanda.request(instruments.InstrumentsCandles(instrument=market, params=params))['candles']
+    candles = await getCandles(market, 500, length)
     MACD1, signal = await MACD(candles, 80, 40, 9)
     MACD_recent = MACD1[0].tolist()[-1:-100:-1]
     signal_recent = signal[0].tolist()[-1:-100:-1]
@@ -620,11 +618,7 @@ async def MACD_strategy(market, length):
 async def ATR_strategy(market, length):
     enter_signal = 0.0
     exit_signal = 0.0
-    params = {
-        "count": 500,
-        "granularity": length
-    }
-    candles = oanda.request(instruments.InstrumentsCandles(instrument=market, params=params))['candles']
+    candles = await getCandles(market, 500, length)
     atr = await ATR(market, candles, 50)
     # print(type(atr), atr)
     atr_recent = atr.tolist()[-1:-100:-1]
