@@ -88,6 +88,7 @@ async def scalp(order_mode=False):
     symbols_display = [instrument['displayName'] for instrument in instruments1]
     scores_by_market = []
     i = 0
+    symbols = ["EUR_USD", "AUD_USD"]
     for market in symbols:
         scores_by_market.append({
                 'market': market,
@@ -119,12 +120,12 @@ async def scalp(order_mode=False):
         df = pd.DataFrame(
                 columns=["Date", "Open", "High", "Low", "Close", "Volume"]
             )
-        df['Date'] = [i['time'] for i in candles]
-        df['Open'] = [float(i['mid']['o']) for i in candles]
-        df['High'] = [float(i['mid']['h']) for i in candles]
-        df['Low'] = [float(i['mid']['l']) for i in candles]
-        df['Close'] = [float(i['mid']['c']) for i in candles]
-        df['Volume'] = [float(i['volume']) for i in candles]
+        df['Date'] = [i['time'] for i in candles[::-1]]
+        df['Open'] = [float(i['mid']['o']) for i in candles[::-1]]
+        df['High'] = [float(i['mid']['h']) for i in candles[::-1]]
+        df['Low'] = [float(i['mid']['l']) for i in candles[::-1]]
+        df['Close'] = [float(i['mid']['c']) for i in candles[::-1]]
+        df['Volume'] = [float(i['volume']) for i in candles[::-1]]
         last_val, next_val = lstmpredictor.lstm_neural_network(df)
         print(last_val, next_val)
         if last_val > next_val:
@@ -140,6 +141,7 @@ async def scalp(order_mode=False):
         print("double EMA score: {}".format(double_ema_score))
         print("MACD score: {}".format(MACD_score))
         print("ATR score: {}".format(ATR_score))
+        print("LSTM score: {}".format(lstm_signal))
         # print("Points of Value score: {}".format(points_of_val_score))
         # print("Client Sentiment Score: {}".format(client_sentiment_score))
         # scores_by_market[i]['strategy_scores'].extend([rsi_h1_score, double_ema_score, MACD_score, ATR_score])

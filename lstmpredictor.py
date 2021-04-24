@@ -31,10 +31,10 @@ def lstm_neural_network(historical_data, look_back=240):
 	OHLC_avg = dataset[['Close']]
 
 	# PLOTTING ALL INDICATORS IN ONE PLOT
-	plt.plot(obs, OHLC_avg, 'r', label = 'OHLC avg')
-	plt.plot(obs, HLC_avg, 'b', label = 'HLC avg')
-	plt.plot(obs, close_val, 'g', label = 'Closing price')
-	plt.legend(loc = 'upper right')
+	# plt.plot(obs, OHLC_avg, 'r', label = 'OHLC avg')
+	# plt.plot(obs, HLC_avg, 'b', label = 'HLC avg')
+	# plt.plot(obs, close_val, 'g', label = 'Closing price')
+	# plt.legend(loc = 'upper right')
 	# plt.show()
 
 	# PREPARATION OF TIME SERIES DATASE
@@ -129,7 +129,7 @@ def lstm_neural_network(historical_data, look_back=240):
 	print("Next Candle value: {}".format(np.asscalar(next_val_dnormalized[-1])))
 
 	plt.plot(np.asscalar(last_val_dnormalized[-1]), 'y', label='next candle prediction') 
-	# plt.show()
+	plt.show()
 
 	return np.asscalar(last_val_dnormalized[-1]), np.asscalar(next_val_dnormalized[-1])
 
